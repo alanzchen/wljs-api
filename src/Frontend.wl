@@ -4,7 +4,6 @@ BeginPackage["CoffeeLiqueur`Extensions`API`", {
     "CoffeeLiqueur`Notebook`Transactions`",
     "JerryI`Misc`Events`Promise`",
     "JerryI`Misc`WLJS`Transport`",
-    "JerryI`WLJSPM`",
     "JerryI`WLX`Importer`",
     "KirillBelov`HTTPHandler`",
     "KirillBelov`HTTPHandler`Extensions`",
@@ -14,6 +13,8 @@ BeginPackage["CoffeeLiqueur`Extensions`API`", {
 
 
 Begin["`Internal`"]
+
+Needs["CoffeeLiqueur`ExtensionManager`" -> "WLJSPackages`"];
 
 Needs["CoffeeLiqueur`Notebook`Cells`" -> "cell`"];
 Needs["CoffeeLiqueur`Notebook`" -> "nb`"];
@@ -279,25 +280,25 @@ apiCall[request_, "/api/extensions/"] := {
 
 apiCall[request_, "/api/extensions/list/"] := With[{},
     Map[Function[key, 
-        <|"name" -> key, "version" -> WLJS`PM`Packages[key, "version"]|>
+        <|"name" -> key, "version" -> WLJSPackages`Packages[key, "version"]|>
     ], 
-        Select[WLJS`PM`Packages // Keys, (WLJS`PM`Packages[#, "enabled"] && KeyExistsQ[WLJS`PM`Packages[#, "wljs-meta"], "minjs"]) &] 
+        Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"]) &] 
     ]
 ]
 
 pmIncludes[param_, whitelist_List] := 
 Table[ 
     Table[ 
-      Import[FileNameJoin[{"wljs_packages", WLJS`PM`Packages[i, "name"], StringSplit[j, "/"]} // Flatten], "Text"] // URLEncode
-    , {j, {WLJS`PM`Packages[i, "wljs-meta", param]} // Flatten} ]
-, {i, Select[WLJS`PM`Packages // Keys, (MemberQ[whitelist, #] && WLJS`PM`Packages[#, "enabled"] && KeyExistsQ[WLJS`PM`Packages[#, "wljs-meta"], param])&]}] // Flatten;
+      Import[FileNameJoin[{"wljs_packages", WLJSPackages`Packages[i, "name"], StringSplit[j, "/"]} // Flatten], "Text"] // URLEncode
+    , {j, {WLJSPackages`Packages[i, "wljs-meta", param]} // Flatten} ]
+, {i, Select[WLJSPackages`Packages // Keys, (MemberQ[whitelist, #] && WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], param])&]}] // Flatten;
 
 pmIncludesNoEncode[param_, whitelist_List] := 
 Table[ 
     Table[ 
-      Import[FileNameJoin[{"wljs_packages", WLJS`PM`Packages[i, "name"], StringSplit[j, "/"]} // Flatten], "Text"] 
-    , {j, {WLJS`PM`Packages[i, "wljs-meta", param]} // Flatten} ]
-, {i, Select[WLJS`PM`Packages // Keys, (MemberQ[whitelist, #] && WLJS`PM`Packages[#, "enabled"] && KeyExistsQ[WLJS`PM`Packages[#, "wljs-meta"], param])&]}] // Flatten;
+      Import[FileNameJoin[{"wljs_packages", WLJSPackages`Packages[i, "name"], StringSplit[j, "/"]} // Flatten], "Text"] 
+    , {j, {WLJSPackages`Packages[i, "wljs-meta", param]} // Flatten} ]
+, {i, Select[WLJSPackages`Packages // Keys, (MemberQ[whitelist, #] && WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], param])&]}] // Flatten;
 
 
 apiCall[request_, "/api/extensions/get/minjs/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
@@ -308,7 +309,7 @@ inBlackList[key_] := MemberQ[{"wljs-markdown-support", "wljs-plotly", "wljs-wxf-
 
 globalWindow = ""
 
-apiCall[request_, "/api/extensions/bundle/minjs/"] := With[{list = Select[WLJS`PM`Packages // Keys, (WLJS`PM`Packages[#, "enabled"] && KeyExistsQ[WLJS`PM`Packages[#, "wljs-meta"], "minjs"] && !inBlackList[#]) &] },
+apiCall[request_, "/api/extensions/bundle/minjs/"] := With[{list = Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"] && !inBlackList[#]) &] },
     StringJoin[globalWindow, "\r\n{\r\n", StringRiffle[pmIncludesNoEncode["minjs", Flatten[{list}] ], ";;\r\n};\r\n{\r\n"], "\r\n}"] // URLEncode
 ]
 
@@ -316,7 +317,7 @@ apiCall[request_, "/api/extensions/get/styles/"] := With[{body = ImportString[By
     pmIncludes["styles", Flatten[{body}] ]
 ]
 
-apiCall[request_, "/api/extensions/bundle/styles/"] := With[{list = Select[WLJS`PM`Packages // Keys, (WLJS`PM`Packages[#, "enabled"] && KeyExistsQ[WLJS`PM`Packages[#, "wljs-meta"], "minjs"]) &]},
+apiCall[request_, "/api/extensions/bundle/styles/"] := With[{list = Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"]) &]},
     StringRiffle[pmIncludesNoEncode["styles", Flatten[{list}] ], "\r\n\r\n"] // URLEncode
 ]
 
