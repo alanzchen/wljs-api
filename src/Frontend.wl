@@ -279,11 +279,11 @@ apiCall[request_, "/api/extensions/"] := {
 }
 
 apiCall[request_, "/api/extensions/list/"] := With[{},
-    Map[Function[key, 
+    Join[Map[Function[key, 
         <|"name" -> key, "version" -> WLJSPackages`Packages[key, "version"]|>
     ], 
         Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"]) &] 
-    ]
+    ], {<|"name" -> "common-css", "version" -> "0.1"|>}]
 ]
 
 pmIncludes[param_, whitelist_List] := 
@@ -300,9 +300,16 @@ Table[
     , {j, {WLJSPackages`Packages[i, "wljs-meta", param]} // Flatten} ]
 , {i, Select[WLJSPackages`Packages // Keys, (MemberQ[whitelist, #] && WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], param])&]}] // Flatten;
 
+pmIncludesNoEncode[param_, alterparam_, whitelist_List] := 
+Table[ 
+    Table[ 
+      Import[FileNameJoin[{"wljs_packages", WLJSPackages`Packages[i, "name"], StringSplit[j, "/"]} // Flatten], "Text"] 
+    , {j, {WLJSPackages`Packages[i, "wljs-meta", alterparam]} // Flatten} ]
+, {i, Select[WLJSPackages`Packages // Keys, (MemberQ[whitelist, #] && WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], param])&]}] // Flatten;
+
 
 apiCall[request_, "/api/extensions/get/minjs/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
-    pmIncludes["minjs", Flatten[{body}] ]
+    pmIncludes["minjs", Flatten[{body}] /. {"common-css" -> Nothing} ]
 ]
 
 inBlackList[key_] := MemberQ[{"wljs-markdown-support", "wljs-plotly", "wljs-wxf-accelerator", "wljs-html-support", "wljs-js-support", "wljs-sharedlib-mk", "wljs-mermaid-support", "wljs-revealjs"}, key]
@@ -310,15 +317,23 @@ inBlackList[key_] := MemberQ[{"wljs-markdown-support", "wljs-plotly", "wljs-wxf-
 globalWindow = ""
 
 apiCall[request_, "/api/extensions/bundle/minjs/"] := With[{list = Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"] && !inBlackList[#]) &] },
-    StringJoin[globalWindow, "\r\n{\r\n", StringRiffle[pmIncludesNoEncode["minjs", Flatten[{list}] ], ";;\r\n};\r\n{\r\n"], "\r\n}"] // URLEncode
+    StringJoin[globalWindow, "/* wljs-api bundler */\r\n{\r\n", StringRiffle[pmIncludesNoEncode["minjs", Flatten[{list}] ], "\r\n}\r\n{\r\n"], "\r\n}"] // URLEncode
 ]
 
+common = Import[FileNameJoin[{$InputFileName // DirectoryName // ParentDirectory, "assets", "common.css"}], "Text"];
+
 apiCall[request_, "/api/extensions/get/styles/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
-    pmIncludes["styles", Flatten[{body}] ]
+    If[MemberQ[ Flatten[{body}], "common-css"], 
+        Join[pmIncludes["styles", Flatten[{body}] ], {
+            common // URLEncode
+        }]
+    ,
+        pmIncludes["styles", Flatten[{body}] ]
+    ]
 ]
 
 apiCall[request_, "/api/extensions/bundle/styles/"] := With[{list = Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"]) &]},
-    StringRiffle[pmIncludesNoEncode["styles", Flatten[{list}] ], "\r\n\r\n"] // URLEncode
+    StringRiffle[Join[pmIncludesNoEncode["styles", Flatten[{list}] ], {common}], "\r\n\r\n"] // URLEncode
 ]
 
 
