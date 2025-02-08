@@ -1,11 +1,9 @@
 
 
-@font-face {
-    font-family: 'Hasklig';
-    font-style: normal;
-    font-weight: normal;
-    src: url("/Fonts/Hasklig-Regular.otf");
-  }
+.block-language-wolf .cm-content {
+  width: unset !important;
+}
+
   .margin-bottom-fix {
     margin-bottom: 0.15em;
   }
