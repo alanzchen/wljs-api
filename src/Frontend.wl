@@ -62,7 +62,10 @@ objects = <||>;
 
 apiCall[request_, "/api/frontendobjects/get/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
     With[{
-        k = SelectFirst[AppExtensions`KernelList, (#["Hash"] === body["Kernel"]) &],
+        k = If[StringQ[body["Kernel"] ], 
+            SelectFirst[AppExtensions`KernelList, (#["Hash"] === body["Kernel"]) &],  
+            SelectFirst[AppExtensions`KernelList, (TrueQ[#["ContainerReadyQ"] ] && TrueQ[#["ReadyQ"] ]) &]
+        ],
         uid = body["UId"],
         promise = Promise[]
     },
@@ -268,6 +271,66 @@ apiCall[request_, "/api/kernels/deinit/"] := With[{body = ImportString[ByteArray
 ];
 
 {deinitKernel, initKernel}           = ImportComponent["Frontend/KernelUtils.wl"];
+
+apiCall[request_, "/api/cdn/"] := {
+    "/api/cdn/list/",
+    "/api/cdn/get/js/",
+    "/api/cdn/get/styles/"
+}
+
+apiCall[request_, "/api/cdn/get/js/"] := With[{
+    body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"],
+    thisrepo = WLJSPackages`Packages["wljs-api", "key"]
+},
+    Join[{
+        "https://cdn.skypack.dev/twind/shim"
+    }, getCDNJS[Flatten[{body}] /. {"common-css" -> Nothing}], {
+        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo["key"] ], getBranch[thisrepo["key"] ] ], "assets/polyfill.js" ]
+    }]
+]
+
+apiCall[request_, "/api/cdn/get/styles/"] := With[{
+    thisrepo = WLJSPackages`Packages["wljs-api", "key"]
+},
+    {
+        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo["key"] ], getBranch[thisrepo["key"] ] ], "assets/minimal.css" ]
+    }
+]
+
+apiCall[request_, "/api/cdn/list/"] := With[{},
+    Join[Map[Function[key, 
+        key
+    ], 
+        Select[WLJSPackages`Packages // Keys, (WLJSPackages`Packages[#, "enabled"] && KeyExistsQ[WLJSPackages`Packages[#, "wljs-meta"], "minjs"]) &] 
+    ] ]
+]
+
+
+getCDNJS[list_] := With[{}, 
+  (With[{
+    url = StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[#["key"] ], getBranch[#["key"] ] ], #["path"] ]
+  },
+
+    url
+
+  ]& /@ Flatten[Table[
+      Table[
+          Echo[<|"key"->WLJSPackages`Packages[i, "key"], "path"->j, "original"->i|>];
+          <|"key"->WLJSPackages`Packages[i, "key"], "path"->j|>
+      , {j, {WLJSPackages`Packages[i, "wljs-meta", "js"]} // Flatten}]
+  , {i, list} ] ]) 
+]
+
+existsOrEmpty[settings_, field_] := If[KeyExistsQ[settings, field], settings[field], {}]
+
+existsOrTrue[settings_, field_] := If[KeyExistsQ[settings, field], settings[field], True]
+
+
+getRepo[Rule[_, url_String]] := StringReplace[url, "https://github.com/"~~s_:>s]
+getBranch[Rule[_, url_String]] := "master"
+
+getRepo[Rule[_, Rule[url_String, _]]] := StringReplace[url, "https://github.com/"~~s_:>s]
+getBranch[Rule[_, Rule[url_String, branch_String]]] := branch
 
 
 apiCall[request_, "/api/extensions/"] := {
