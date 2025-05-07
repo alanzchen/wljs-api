@@ -1,151 +1,70 @@
 
+
 //setting up global virtual server
 const server = {};
 window.server = server;
 
-let promises;
-let symbols;
-let eventsPool;
 
-server.loadObjects = (result) => {
-    interpretate(result.objects, {hold:true}).then((i) => {
-        console.warn('Objects loaded!');
-        Object.keys(i).forEach((oName) => {
-          const obj = new ObjectStorage(oName);
-          obj.cache = i[oName];
-          obj.cached = true;
-        });
-
-        Object.keys(promises).forEach((key) => {
-          if (Array.isArray(promises[key])) {
-            promises[key].forEach((el) => el.resolve(i[key]));
-          } else {
-            promises[key].resolve(i[key]);
-          }
-        })
+//polyfill for WLJSIO package
+server.kernel = {
+  io: {
+    fetch: async (symbol, args = []) => {
+      console.warn('kernel symbol request');
+      let uid = await fetch(addr + '/api/kernels/fetch/', { 
+        method: 'POST', 
+        body:JSON.stringify({
+          'Symbol': symbol,
+          'Args': args,
+          'Kernel': null
+        }),
+        ...fetchOptions 
       });
 
-      interpretate(result.symbols, {hold:true}).then((i) => {
-        console.warn('Symbols loaded!');
-        Object.keys(i).forEach((oName) => {
-          core[oName] = async (args, env) => {
-            const data = await interpretate(core[oName].data, env);
-            return data;
-          }
-          core[oName].data = i[oName]
-          core[oName] = async (args, env) => {
-            console.log('IE: calling our symbol...');
-            //evaluate in the context
-            const data = await interpretate(core[oName].data, env);
-        
-            if (env.root && !env.novirtual) core[oName].instances[env.root.uid] = env.root; //if it was evaluated insdide the container, then, add it to the tracking list
-            //if (env.hold) return ['JSObject', core[name].data];
-        
-            return data;
-          }
-        
-          core[oName].update = async (args, env) => {
-            //evaluate in the context
-            //console.log('IE: update was called...');
-        
-            //cache good for numerics
-            if (env.useCache) {
-              if (!core[oName].cached || core[oName].currentData != core[oName].data) {
-                core[oName].cached = await interpretate(core[oName].data, env);
-                core[oName].currentData = core[oName].data; //just copy the reference
-                //console.log('cache miss');
-              } 
-        
-              return core[oName].cached;
-            }
-        
-            const data = await interpretate(core[oName].data, env);
-            //if (env.hold) return ['JSObject', data];
-            return data;
-          }  
-        
-          core[oName].destroy = async (args, env) => {
-        
-            delete core[oName].instances[env.root.uid];
-            console.warn(env.root.uid + ' was destroyed')
-            console.warn('external symbol was destoryed');
-          }  
-        
-          core[oName].data = structuredClone(i[oName]); //get the data
-        
-          core[oName].virtual = true;
-          core[oName].instances = {};
+      uid = await uid.json();
 
-        });
+      console.warn('Request id: ', uid);
 
-        Object.keys(symbols).forEach((key) => {
-          console.warn(key);
-          symbols[key].resolve(i[key]);
-        });
-      });
+      let resolvedQ = false;
+      let data;
+
+      while(!resolvedQ) {
+
+        await delay(polingDelay);
+        console.log('checking...');
+        data = await fetch(addr + '/api/kernels/fetch/get/', { 
+          method: 'POST', 
+          body:JSON.stringify({
+            'UId': uid
+          }),
+          ...fetchOptions 
+        }); 
+        data = await data.json();
       
-      
-}
+        resolvedQ = data.ReadyQ;
 
-server.flushEvents = () => {
-    eventsPool.forEach((ev) => {
-        if (ev[0] == 'fire') {
-          server.kernel.io.fire(ev[1], ev[2], ev[3]);
-        } else if (ev[0] == 'poke') {
-          server.kernel.io.poke(ev[1]);
-        }
-    });
-    eventsPool = [];
-}
-
-server.resetIO = () => {
-    console.warn('Virtual server hard reset');
-
-    promises = {};
-    symbols =  {};
-    eventsPool = [];
-
-    server.kernel = {
-        io: {
-          fire(uid, payload, pattern="Default") {
-            eventsPool.push(['fire', uid, payload, pattern]);
-          },
-          poke(uid) {
-            eventsPool.push(['poke', uid]);
-          }
-        }
-    };
-
-    server.io = {};
-
-    server.ask = (what) => {
-        const p = new Deferred();
-        
-        if (what.length < 42) {
-          console.error('Unknown command');
-          console.error(what);
-          return false;
-        }
-        //throw what;
-        const offset = 'CoffeeLiqueur`Extensions`FrontendObject`Internal`GetObject["'.length;
-        if (Array.isArray(promises[what.slice(offset,-2)])) {
-          promises[what.slice(offset,-2)].push(p);
-        } else {
-          promises[what.slice(offset,-2)] = [p];
-        }
-        
-        return p.promise;
       }
 
-      server.getSymbol = (name) => {
-        const p = new Deferred();
+      console.warn(data.Result);
 
-        console.warn('Asking for symbol' + name);
+      return data.Result;
 
-        symbols[name] = p;
-        return p.promise;
-      }
-}
+    },
+    fire: () => {
+      console.warn('server.kernel.io.fire is not supported')
+    },
+    poke: () => {
+      console.warn('server.kernel.io.poke is not supported')
+    }
+  },
+
+  emitt: () => {
+    console.warn('server.kernel.emitt is not supported')
+  },
+
+  ask: () => {
+    console.warn('server.kernel.ask is not supported')
+  }
+};
 
 var addr = 'http://127.0.0.1:20560';
 var fetchOptions = {};
@@ -248,6 +167,7 @@ server.requestCDNStyles = async () => {
 }
 
 server.requestObject = async (kernel, uid) => {
+    console.log('request an object: ', uid);
     let r = await fetch(addr + '/api/frontendobjects/get/', {
         method:'POST',
         body:JSON.stringify({
@@ -257,11 +177,16 @@ server.requestObject = async (kernel, uid) => {
         ...fetchOptions
     });
 
+
     r = await r.json();
+
+    console.log(r);
 
     if (r.Resolved == true) {
         return JSON.parse(r.Data);
     }
+
+    console.log('waiting...');
 
     await delay(polingDelay);
 
@@ -288,8 +213,9 @@ window.ObjectStorage.prototype.get = function () {
       const promise = new Deferred();
 
       server.cachingFunction(self.uid).then((result) => {
-        if (!result) {
-            console.warn('Rejected! Not found');
+        if (!result || result == '$Failed') {
+            console.warn('Rejected! Not found: ', self.uid);
+            console.warn(result);
             promise.reject();
             return;
         }
@@ -354,3 +280,4 @@ core.Offload = (args, env) => {
   
     return interpretate(args[0], env);
   }
+

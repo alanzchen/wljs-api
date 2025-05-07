@@ -69,13 +69,18 @@ apiCall[request_, "/api/frontendobjects/get/"] := With[{body = ImportString[Byte
         uid = body["UId"],
         promise = Promise[]
     },
+        Echo["Fetching object: "<>uid];
+
         If[!KeyExistsQ[objects, uid],
+            Echo["not found, requesting: "<>uid];
+
             If[MissingQ[k], $Failed, 
+
                 With[{
                     promiseId = promise // First
                 },
                     GenericKernel`Async[k, With[{o = CoffeeLiqueur`Extensions`FrontendObject`Internal`GetObject[uid]},
-                            EventFire[Internal`Kernel`Stdout[promiseId], Resolve, ExportString[o, "ExpressionJSON", "Compact"->1] ];
+                            EventFire[Internal`Kernel`Stdout[promiseId], Resolve, ExportByteArray[o, "ExpressionJSON", "Compact"->1] ];
                         ]
                     ];
                 ];
@@ -83,8 +88,10 @@ apiCall[request_, "/api/frontendobjects/get/"] := With[{body = ImportString[Byte
                 objects[uid] = <|"Resolved" -> False|>;
 
                 Then[promise, Function[data,
+                    Echo["Resolved for: "<>uid];
+                    Echo[data // ByteArrayToString];
                     objects[uid] = Join[objects[uid], <|"Resolved" -> True,
-                                                        "Data" -> data|>
+                                                        "Data" -> ByteArrayToString[data]|>
                     ];
                 ] ];
 
@@ -92,7 +99,13 @@ apiCall[request_, "/api/frontendobjects/get/"] := With[{body = ImportString[Byte
 
             ]
         ,
-            objects[uid]
+            With[{o = objects[uid]},
+                If[o["Resolved"] === True,
+                    objects[uid] = .;
+                    o
+                ]
+            ]
+            
         ]
     ]    
 ]
@@ -199,8 +212,67 @@ apiCall[request_, "/api/kernels/"] := {
     "/api/kernels/create/",
     "/api/kernels/unlink/",
     "/api/kernels/init/",
-    "/api/kernels/deinit/"
+    "/api/kernels/deinit/",
+    "/api/kernels/fetch/"
 }
+
+requests = <||>;
+
+
+fetchRequest[sym_, args_, kernel_] := With[{
+   arguments = args,
+   symbol = sym,
+   promise = Promise[]
+},
+   With[{key = promise // First}, 
+    requests[key] = <|"ReadyQ"->False|>;
+    Then[promise, Function[value, 
+        requests[key] = <|"Result"->ByteArrayToString[value], "ReadyQ"->True|>;
+    ] ];
+
+    Echo["Fetch symbol: "<>ToString[sym, InputForm] ];
+    Echo["with arguments: "<>ToString[args, InputForm] ];
+
+    GenericKernel`Async[kernel, 
+        With[{esymbol = ToExpression[symbol]},
+            With[{result = (esymbol @@ arguments)},
+                If[MatchQ[result, _Promise],
+                    Then[result, Function[xa,
+                        EventFire[Internal`Kernel`Stdout[ key ], Resolve, ExportByteArray[xa, "ExpressionJSON"] ] 
+                    ] ]
+                ,
+                    EventFire[Internal`Kernel`Stdout[ key ], Resolve, ExportByteArray[result, "ExpressionJSON"] ] 
+                ];
+            ]
+        ]
+    ];
+    
+    key
+   ]
+]
+
+apiCall[request_, "/api/kernels/fetch/get/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[{
+        uid = requests[ body["UId"] ]
+    },
+        If[MissingQ[uid], $Failed, 
+            uid
+        ]
+    ]
+]
+
+apiCall[request_, "/api/kernels/fetch/"] := With[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[{
+        k = If[StringQ[body["Kernel"] ], 
+            SelectFirst[AppExtensions`KernelList, (#["Hash"] === body["Kernel"]) &],
+            SelectFirst[AppExtensions`KernelList, (TrueQ[#["ContainerReadyQ"] ] && TrueQ[#["ReadyQ"] ]) &]
+        ]
+    },
+        If[MissingQ[k], $Failed, 
+            fetchRequest[body["Symbol"], body["Args"], k]
+        ]
+    ]
+]
 
 apiCall[request_, "/api/kernels/list/"] := With[{},
     <|
