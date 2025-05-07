@@ -285,7 +285,7 @@ apiCall[request_, "/api/cdn/get/js/"] := With[{
     Join[{
         "https://cdn.skypack.dev/twind/shim"
     }, getCDNJS[Flatten[{body}] /. {"common-css" -> Nothing}], {
-        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo["key"] ], getBranch[thisrepo["key"] ] ], "assets/polyfill.js" ]
+        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo ], getBranch[thisrepo ] ], "assets/polyfill.js" ]
     }]
 ]
 
@@ -293,7 +293,7 @@ apiCall[request_, "/api/cdn/get/styles/"] := With[{
     thisrepo = WLJSPackages`Packages["wljs-api", "key"]
 },
     {
-        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo["key"] ], getBranch[thisrepo["key"] ] ], "assets/minimal.css" ]
+        StringJoin[StringTemplate["https://cdn.jsdelivr.net/gh/``@``/"][getRepo[thisrepo ], getBranch[thisrepo ] ], "assets/minimal.css" ]
     }
 ]
 
@@ -315,7 +315,6 @@ getCDNJS[list_] := With[{},
 
   ]& /@ Flatten[Table[
       Table[
-          Echo[<|"key"->WLJSPackages`Packages[i, "key"], "path"->j, "original"->i|>];
           <|"key"->WLJSPackages`Packages[i, "key"], "path"->j|>
       , {j, {WLJSPackages`Packages[i, "wljs-meta", "js"]} // Flatten}]
   , {i, list} ] ]) 

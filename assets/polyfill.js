@@ -1,5 +1,3 @@
-/* Polyfill for React based websites. It replaces server object and redirect all output to buffers */
-/* add it to the head tag using any CDN */
 
 //setting up global virtual server
 const server = {};
@@ -204,11 +202,14 @@ server.getResult = async (kernel, transaction) => {
         ...fetchOptions
     });
 
+    
     result = await result.json();
     console.log(result);
+    
 
-    if (!(result.State == 'Idle')) result = await getResult(kernel, transaction);
-
+    if (!(result.State == 'Idle')) {
+      return await server.getResult(kernel, transaction);
+    }
     
     return result.Result;
 
@@ -264,7 +265,7 @@ server.requestObject = async (kernel, uid) => {
 
     await delay(polingDelay);
 
-    return await requestObject(kernel, uid)
+    return await server.requestObject(kernel, uid)
 }
 
 server.cachingFunction = async (objectId) => {
@@ -273,6 +274,14 @@ server.cachingFunction = async (objectId) => {
 }
 
 //implemetation of get method depends on execution env
+if (!window.ObjectStorage) {
+    window.ObjectStorage = class {
+
+    };
+
+    console.error('window.ObjectStorage is absent. Most likely you did not include global core scripts as modules.');
+}
+
 window.ObjectStorage.prototype.get = function () {
       if (this.cached) return this.cache;
       const self = this;
@@ -291,6 +300,10 @@ window.ObjectStorage.prototype.get = function () {
       return promise.promise;
     }
 
+if (!window.core) {
+    window.core = {};
+    console.error('window.core is absent. Most likely you did not include global core scripts as modules.');
+}    
 
 
 //Polyfills fro WLJSIO package
