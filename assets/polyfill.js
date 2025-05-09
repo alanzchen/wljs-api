@@ -151,6 +151,19 @@ server.createTransaction = async (kernel, data) => {
     return transaction;
 }
 
+server.abortKernel = async (kernel) => {
+  let res = await fetch(addr + '/api/kernels/abort/', {
+                  method:'POST',
+                  body:JSON.stringify({
+                      'Hash': kernel
+                  }),
+                  ...fetchOptions
+  });
+
+  res = await res.json();
+  return res;
+}
+
 server.requestCDNExtensionsList = async () => {
     const listRes = await fetch(addr + '/api/cdn/list/', { method: 'POST', ...fetchOptions });
     return await listRes.json();
