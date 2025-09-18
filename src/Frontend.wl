@@ -48,8 +48,16 @@ apiCall[request_, "/api/"] := {
     "/api/frontendobjects/",
     "/api/extensions/",
     "/api/ready/",
-    "/api/notebook/"
+    "/api/notebook/",
+    "/api/alphaRequest/"
 }
+
+apiCall[request_, "/api/alphaRequest/"] := With[{query = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]["Query"]},
+    ImportString[ExportString[
+        WolframAlpha[query, "ShortAnswer"], 
+        "Table",   CharacterEncoding -> "ASCII"
+    ],  "String"]
+]
 
 apiCall[request_, "/api/ready/"] := <|"ReadyQ" -> True|>
 
