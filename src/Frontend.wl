@@ -70,6 +70,7 @@ apiCall[request_, "/api/notebook/list/"] := With[{},
 apiCall[request_, "/api/notebook/cells/"] := {
     "/api/notebook/cells/list/",
     "/api/notebook/cells/get/",
+    "/api/notebook/cells/focused/",
     "/api/notebook/cells/set/",
     "/api/notebook/cells/add/",
     "/api/notebook/cells/evaluate/",
@@ -87,6 +88,20 @@ apiCall[request_, "/api/notebook/cells/list/"] := Module[{body = ImportString[By
                 "Type" -> #["Type"],
                 "Display" -> #["Display"]
             |> &/@ cells    
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/focused/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{cell = notebook["FocusedCell"]},
+            <|
+                "Id"-> #["Hash"],
+                "Type" -> #["Type"],
+                "Display" -> #["Display"]
+            |> & @ If[MatchQ[cell, _cell`CellObj], cell, notebook["Cells"] // Last]
         ]
     ]
 ]
@@ -125,13 +140,19 @@ apiCall[request_, "/api/notebook/cells/set/"] := Module[{body = ImportString[Byt
 apiCall[request_, "/api/notebook/cells/evaluate/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
     With[
         {cell = nb`HashMap[ body["Cell"] ]},
+        {notebook = cell["Notebook"]},
         If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
-        If[TrueQ[cell["Notebook"]["Opened"] ], 
-            EventFire[cell, "ChangeContent", body["Data"] ];
-            "Data field was updated live in the notebook"
+        If[TrueQ[notebook["Opened"] ], 
+            With[{controller = notebook["Controller"], socket = notebook["Socket"]},
+                (*fixme*)
+                Block[{Global`$Client = socket},
+                    EventFire[controller, "NotebookCellEvaluate", cell];
+                    "Evaluation started"
+                ]
+            ]
         ,
-            cell["Data"] = body["Data"];
-            "Data field was updated"
+            (* Can't evaluate cell in a closed notebook *)
+            $Failed
         ]
     ]
 ]
