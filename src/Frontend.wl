@@ -47,10 +47,95 @@ apiCall[request_, "/api/"] := {
     "/api/transactions/",
     "/api/frontendobjects/",
     "/api/extensions/",
-    "/api/ready/"
+    "/api/ready/",
+    "/api/notebook/"
 }
 
 apiCall[request_, "/api/ready/"] := <|"ReadyQ" -> True|>
+
+
+apiCall[request_, "/api/notebook/"] := {
+    "/api/notebook/list/",
+    "/api/notebook/cells/"
+}
+
+apiCall[request_, "/api/notebook/list/"] := With[{},
+    <|
+        "Id"-> #["Hash"],
+        "Opened" -> #["Opened"],
+        "Path" -> #["Path"]
+    |> &/@ Values[nb`HashMap]
+]
+
+apiCall[request_, "/api/notebook/cells/"] := {
+    "/api/notebook/cells/list/",
+    "/api/notebook/cells/get/",
+    "/api/notebook/cells/set/",
+    "/api/notebook/cells/add/",
+    "/api/notebook/cells/evaluate/",
+    "/api/notebook/cells/delete/"
+}
+
+
+apiCall[request_, "/api/notebook/cells/list/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{cells = notebook["Cells"]},
+            <|
+                "Id"-> #["Hash"],
+                "Type" -> #["Type"],
+                "Display" -> #["Display"]
+            |> &/@ cells    
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/get/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = nb`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        cell["Data"]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/delete/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = nb`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        Delete[cell];
+        "Removed"
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/set/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = nb`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        If[TrueQ[cell["Notebook"]["Opened"] ], 
+            EventFire[cell, "ChangeContent", body["Data"] ];
+            "Data field was updated live in the notebook"
+        ,
+            cell["Data"] = body["Data"];
+            "Data field was updated"
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/evaluate/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = nb`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        If[TrueQ[cell["Notebook"]["Opened"] ], 
+            EventFire[cell, "ChangeContent", body["Data"] ];
+            "Data field was updated live in the notebook"
+        ,
+            cell["Data"] = body["Data"];
+            "Data field was updated"
+        ]
+    ]
+]
+
 
 
 apiCall[request_, "/api/frontendobjects/"] := {
