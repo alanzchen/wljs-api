@@ -26,17 +26,34 @@ Needs["CoffeeLiqueur`Notebook`AppExtensions`" -> "AppExtensions`"];
 
 apiCall[request_] := With[{type = request["Path"]},
     Echo["API Request >> "<>type];
-    With[{r = ExportByteArray[apiCall[request, type], "JSON"]},
-        <|
-            "Body" -> r, 
-            "Code" -> 200, 
-            "Headers" -> <|
-                "Content-Length" -> Length[r], 
-                "Connection"-> "Keep-Alive", 
-                "Keep-Alive" -> "timeout=5, max=1000", 
-                "Access-Control-Allow-Origin" -> "*"
+    With[{raw = apiCall[request, type]},
+      If[FailureQ[raw],
+        With[{},
+            <|
+                "Body" -> "", 
+                "Code" -> 400, 
+                "Headers" -> <|
+                    "Content-Length" -> 0, 
+                    "Connection"-> "Keep-Alive", 
+                    "Keep-Alive" -> "timeout=5, max=1000", 
+                    "Access-Control-Allow-Origin" -> "*"
+                |>
             |>
-        |>
+        ]       
+      ,
+        With[{r = ExportByteArray[raw, "JSON"]},
+            <|
+                "Body" -> r, 
+                "Code" -> 200, 
+                "Headers" -> <|
+                    "Content-Length" -> Length[r], 
+                    "Connection"-> "Keep-Alive", 
+                    "Keep-Alive" -> "timeout=5, max=1000", 
+                    "Access-Control-Allow-Origin" -> "*"
+                |>
+            |>
+        ]      
+      ]
     ]
 ]
 
@@ -47,10 +64,227 @@ apiCall[request_, "/api/"] := {
     "/api/transactions/",
     "/api/frontendobjects/",
     "/api/extensions/",
-    "/api/ready/"
+    "/api/ready/",
+    "/api/notebook/",
+    "/api/alphaRequest/"
 }
 
+apiCall[request_, "/api/alphaRequest/"] := With[{query = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]["Query"]},
+    ImportString[ExportString[
+        WolframAlpha[query, "ShortAnswer"], 
+        "Table",   CharacterEncoding -> "ASCII"
+    ],  "String"]
+]
+
 apiCall[request_, "/api/ready/"] := <|"ReadyQ" -> True|>
+
+
+apiCall[request_, "/api/notebook/"] := {
+    "/api/notebook/list/",
+    "/api/notebook/create/",
+    "/api/notebook/create/pull/",
+    "/api/notebook/cells/"
+}
+
+apiCall[request_, "/api/notebook/list/"] := With[{},
+    <|
+        "Id"-> #["Hash"],
+        "Opened" -> #["Opened"],
+        "Path" -> #["Path"]
+    |> &/@ Select[Values[nb`HashMap], (Complement[{"Opened", "Path", "Hash"}, #["Properties"] ] === {}) &]
+]
+
+$pullQue = {};
+$stack[_] := False;
+
+EventHandler[EventClone[AppExtensions`AppEvents], {
+    "Loader:NewNotebook" -> Function[notebook,
+        If[Length[$pullQue] > 0, 
+            $pullQue[[1]][ notebook["Hash"] ];
+            $pullQue = Drop[$pullQue, 1]
+        ];
+    ]
+}]
+
+apiCall[request_, "/api/notebook/create/"] := Module[{},
+    With[{opened = SelectFirst[Values[nb`HashMap], (TrueQ[#["Opened"] ]) &]},
+        If[!MatchQ[opened, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{controller = opened["Controller"], socket = opened["Socket"], uid = CreateUUID[]},
+            (*fixme*)
+            $pullQue = Append[$pullQue, Function[n, 
+                $stack[uid] = n;
+            ] ];
+
+            Block[{Global`$Client = socket},
+                EventFire[controller, "_NewQuickNotebook", True];
+                uid
+            ]
+        ]        
+    ]
+]
+
+apiCall[request_, "/api/notebook/create/pull/"] := With[{uid = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]["Id"]},
+    $stack[uid]
+]
+
+
+
+apiCall[request_, "/api/notebook/cells/"] := {
+    "/api/notebook/cells/list/",
+    "/api/notebook/cells/get/",
+    "/api/notebook/cells/focused/",
+    "/api/notebook/cells/set/",
+    "/api/notebook/cells/add/",
+    "/api/notebook/cells/evaluate/",
+    "/api/notebook/cells/project/",
+    "/api/notebook/cells/delete/"
+}
+
+
+apiCall[request_, "/api/notebook/cells/list/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{cells = notebook["Cells"]},
+            <|
+                "Id"-> #["Hash"],
+                "Type" -> #["Type"],
+                "State" -> #["State"],
+                "Display" -> #["Display"]
+            |> &/@ cells    
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/list/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{cells = notebook["Cells"]},
+            <|
+                "Id"-> #["Hash"],
+                "Type" -> #["Type"],
+                "State" -> #["State"],
+                "Display" -> #["Display"]
+            |> &/@ cells    
+        ]
+    ]
+]
+
+
+
+
+apiCall[request_, "/api/notebook/cells/focused/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+        With[{cell = notebook["FocusedCell"]},
+            <|
+                "Id"-> #["Hash"],
+                "Type" -> #["Type"],
+                "State" -> #["State"],
+                "Display" -> #["Display"]
+            |> & @ If[MatchQ[cell, _cell`CellObj], cell, notebook["Cells"] // Last]
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/get/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = cell`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        cell["Data"]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/delete/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = cell`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        Delete[cell];
+        "Removed"
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/set/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = cell`HashMap[ body["Cell"] ]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        If[!cell`OutputQ[cell], Return[$Failed, Module] ];
+        
+        If[TrueQ[cell["Notebook"]["Opened"] ], 
+            EventFire[cell, "ChangeContent", body["Data"] ];
+            "Data field was updated live in the notebook"
+        ,
+            cell["Data"] = body["Data"];
+            "Data field was updated"
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/add/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {notebook = nb`HashMap[ body["Notebook"] ]},
+        If[!MatchQ[notebook, _nb`NotebookObj], Return[$Failed, Module] ];
+
+        With[{after = cell`HashMap[ body["After"] ]},
+            If[!MatchQ[cell, _cell`CellObj], 
+            
+                With[{new = cell`CellObj["Notebook"->notebook, "Type"->"Input", "Data"->body["Data"] ]},
+                    "Added to the end of the notebook"
+                ]                                        
+            ,
+                With[{new = cell`CellObj["Notebook"->notebook, "Type"->"Input", "Data"->body["Data"], "After"->cell]},
+                    "Added after "<>after["Hash"]
+                ]
+            ]
+        ]
+
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/evaluate/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = cell`HashMap[ body["Cell"] ]},
+        {notebook = cell["Notebook"]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        If[TrueQ[notebook["Opened"] ], 
+            With[{controller = notebook["Controller"], socket = notebook["Socket"]},
+                (*fixme*)
+                Block[{Global`$Client = socket},
+                    EventFire[controller, "NotebookCellEvaluate", cell];
+                    "Evaluation started"
+                ]
+            ]
+        ,
+            (* Can't evaluate cell in a closed notebook *)
+            $Failed
+        ]
+    ]
+]
+
+apiCall[request_, "/api/notebook/cells/project/"] := Module[{body = ImportString[ByteArrayToString[request["Body"] ], "RawJSON"]},
+    With[
+        {cell = cell`HashMap[ body["Cell"] ]},
+        {notebook = cell["Notebook"]},
+        If[!MatchQ[cell, _cell`CellObj], Return[$Failed, Module] ];
+        If[TrueQ[notebook["Opened"] ], 
+            With[{controller = notebook["Controller"], socket = notebook["Socket"]},
+                (*fixme*)
+                Block[{Global`$Client = socket},
+                    EventFire[controller, "NotebookCellProject", cell];
+                    "Evaluation started"
+                ]
+            ]
+        ,
+            (* Can't evaluate cell in a closed notebook *)
+            $Failed
+        ]
+    ]
+]
+
+
+
 
 
 apiCall[request_, "/api/frontendobjects/"] := {

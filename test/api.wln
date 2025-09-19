@@ -1,0 +1,166 @@
+<|"Notebook" -> <|"Controller" -> "c281e310-5e7a-4841-9c57-2871304d8225", 
+   "FocusedCell" -> CoffeeLiqueur`Notebook`Cells`CellObj[
+     CoffeeLiqueur`Notebook`Cells`CellObj`$2723], "HaveToSaveAs" -> True, 
+   "MessangerChannel" -> Messanger, "ModalsChannel" -> 
+    "ad9601d9-4cf9-46ca-ae62-a082996d8bb1", "Objects" -> <||>, 
+   "Path" -> "/Users/kirill/Library/Application \
+Support/wljs-notebook/wljs_packages/wljs-api/test/api.wln", 
+   "PublicFields" -> {"Properties"}, "Quick" -> True, "Symbols" -> <||>, 
+   "TOC" -> {CoffeeLiqueur`Extensions`TOC`Private`heading[2, 
+      "Notebook WebAPI Test", CoffeeLiqueur`Notebook`Cells`CellObj[
+       CoffeeLiqueur`Notebook`Cells`CellObj`$2842]]}|>, 
+ "Cells" -> {<|"Data" -> ".md\n## Notebook WebAPI Test\nA helper function:", 
+    "Display" -> "codemirror", "Hash" -> 
+     "de1d1d1a-1797-409b-8d68-6f661691a1c1", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "## Notebook WebAPI Test\nA helper function:", 
+    "Display" -> "markdown", "Hash" -> 
+     "203247d4-6991-42c2-b734-fef5a069c2be", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nwindow.makeRequest = async (path, body) => {\n      \
+let data = await fetch('http://127.0.0.1:20560' + path, { \n        method: \
+'POST', \n        body:JSON.stringify(body)\n      });\n\n      data = await \
+data.json();\n      return data;\n}", "Display" -> "codemirror", 
+    "Hash" -> "e8e763a7-2325-4db2-9bc1-fded2381d49a", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "\nwindow.makeRequest = async (path, body) => {\n      let \
+data = await fetch('http://127.0.0.1:20560' + path, { \n        method: \
+'POST', \n        body:JSON.stringify(body)\n      });\n\n      data = await \
+data.json();\n      return data;\n}", "Display" -> "js", 
+    "Hash" -> "6f6886ad-eb3b-435e-9d4a-dae2a83d49e1", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nGet the list of notebooks:", "Display" -> "codemirror", 
+    "Hash" -> "6dbc9837-31bb-43b7-a72f-043610a58eba", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "Get the list of notebooks:", "Display" -> "markdown", 
+    "Hash" -> "1f96872c-ba1e-4a51-8cf5-cf96e5d97f46", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/list/\", {}).then((result) => {\n  list.innerText = \
+JSON.stringify(result, null, \"\\t\");\n});\n\nreturn list;", 
+    "Display" -> "codemirror", "Hash" -> 
+     "64b2f065-8a2e-4f0b-80ee-8506eae6e15a", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nList cells in the current notebook", 
+    "Display" -> "codemirror", "Hash" -> 
+     "4dde2c0d-6437-4fe0-a2ae-9fbd2f384d4f", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "List cells in the current notebook", "Display" -> "markdown", 
+    "Hash" -> "10bffc39-56d7-4a3a-91fe-e4a35ba62815", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/cells/list/\", {Notebook: \
+\"e39b1dbb-7d08-4eb5-aba7-e51a4606044c\"}).then((result) => {\n  \
+list.innerText = JSON.stringify(result, null, \"\\t\");\n});\n\nreturn list;"\
+, "Display" -> "codemirror", "Hash" -> 
+     "c1609f3d-7d6b-411c-ae6e-6536c3042381", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nRead the content of the first cell", 
+    "Display" -> "codemirror", "Hash" -> 
+     "4172ae54-3222-49d4-b7c5-d3bc200f6b17", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "Read the content of the first cell", "Display" -> "markdown", 
+    "Hash" -> "fed052c0-04a3-499a-8c02-c2083cb65c5c", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/cells/get/\", {Cell: \
+\"de1d1d1a-1797-409b-8d68-6f661691a1c1\"}).then((result) => {\n  \
+list.innerText = JSON.stringify(result, null, \"\\t\");\n});\n\nreturn \
+list;\n", "Display" -> "codemirror", 
+    "Hash" -> "a1236ae2-1043-4990-8a31-c26347b99c0e", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nEdit the content", "Display" -> "codemirror", 
+    "Hash" -> "d7c54d81-bb2c-40fe-88cc-32c97957bade", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "Edit the content", "Display" -> "markdown", 
+    "Hash" -> "7bfc0b5f-0586-4f54-9dce-80d95f932a32", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/cells/set/\", {Cell: \
+\"de1d1d1a-1797-409b-8d68-6f661691a1c1\", Data: \"Hoolo\"}).then((result) => \
+{\n  list.innerText = JSON.stringify(result, null, \"\\t\");\n});\n\nreturn \
+list;\n", "Display" -> "codemirror", 
+    "Hash" -> "1ae6d216-5fd8-45df-bb51-0fcc39806fd0", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nEvaluate this cell", "Display" -> "codemirror", 
+    "Hash" -> "55f268a2-8290-427d-8831-6c51a0b6b25d", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "Evaluate this cell", "Display" -> "markdown", 
+    "Hash" -> "ea85b8a4-97ea-4f08-9838-fb3ce494c435", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/cells/evaluate/\", {Cell: \
+\"de1d1d1a-1797-409b-8d68-6f661691a1c1\"}).then((result) => {\n  \
+list.innerText = JSON.stringify(result, null, \"\\t\");\n});\n\nreturn list;"\
+, "Display" -> "codemirror", "Hash" -> 
+     "d580a849-b698-4fea-9afd-fbeee9fce948", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nAdd a new cell after", "Display" -> "codemirror", 
+    "Hash" -> "38aada6f-f5d8-43e3-9246-a9dabb82df14", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <|"Hidden" -> True|>, 
+    "PublicFields" -> {"Properties"}, "State" -> "Idle", "Type" -> "Input", 
+    "UID" -> Null, "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> "Add a new cell after", "Display" -> "markdown", 
+    "Hash" -> "54a010f4-c3d7-4ba5-95ae-2e03c8292392", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Output", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".js\n\nconst list = \
+document.createElement('pre');\nlist.classList.add('text-xs');\n\nmakeRequest\
+(\"/api/notebook/cells/add/\", {Data: \".md\\nHello World\", Notebook: \
+\"e39b1dbb-7d08-4eb5-aba7-e51a4606044c\"}).then((result) => {\n  \
+list.innerText = JSON.stringify(result, null, \"\\t\");\n});\n\nreturn list;"\
+, "Display" -> "codemirror", "Hash" -> 
+     "11784c8f-550f-4e24-83e9-66355bfd75c5", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>, 
+   <|"Data" -> ".md\nHello World", "Display" -> "codemirror", 
+    "Hash" -> "05dd5578-547c-4129-ac0d-d5064cb11572", "Invisible" -> False, 
+    "MetaOnly" -> False, "Props" -> <||>, "PublicFields" -> {"Properties"}, 
+    "State" -> "Idle", "Type" -> "Input", "UID" -> Null, 
+    "Notebook" -> "e39b1dbb-7d08-4eb5-aba7-e51a4606044c"|>}, 
+ "serializer" -> "jsfn4"|>
