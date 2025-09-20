@@ -1,0 +1,931 @@
+openapi: 3.0.3
+info:
+  title: WLJS Notebook API
+  description: |
+    Comprehensive API for managing Wolfram Language Jupyter-style notebooks (WLJS).
+    This API enables external programs and LLMs to interact with computational notebooks,
+    execute code, manage cells, and handle kernel operations.
+    
+    ## Overview
+    
+    The WLJS API provides a model content protocol for large language models to interact 
+    with computational notebooks. The API is organized around REST endpoints that manage:
+    
+    - **Notebooks**: Create, list, and manage notebook instances
+    - **Cells**: Add, modify, execute, and manage notebook cells
+    - **Kernels**: Control computational kernels for code execution
+    - **Transactions**: Handle asynchronous code evaluation
+    - **Extensions**: Manage frontend extensions and resources
+    
+    ## General Workflow
+    
+    1. **Connection Setup**: Check API readiness with `/api/ready/`
+    2. **Kernel Management**: List available kernels with `/api/kernels/list/`
+    3. **Notebook Operations**: Create or list notebooks
+    4. **Cell Management**: Add cells, set content, and execute code
+    5. **Transaction Handling**: Monitor execution status and retrieve results
+    
+  version: 1.0.7
+  contact:
+    name: WLJS API Support
+    url: https://github.com/alanzchen/wljs-api
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://127.0.0.1:20560
+    description: Local development server
+  - url: http://localhost:20560
+    description: Local server (alternative)
+
+tags:
+  - name: health
+    description: API health and readiness checks
+  - name: notebooks
+    description: Notebook management operations
+  - name: cells
+    description: Cell management and operations
+  - name: kernels
+    description: Computational kernel management
+  - name: transactions
+    description: Asynchronous code execution management
+  - name: frontend-objects
+    description: Frontend object retrieval and caching
+  - name: extensions
+    description: Extension and resource management
+  - name: cdn
+    description: CDN resource management
+  - name: utilities
+    description: Utility functions and integrations
+
+paths:
+  /api/:
+    get:
+      tags: [health]
+      summary: List available API endpoints
+      description: Returns a list of all available API endpoint categories
+      responses:
+        '200':
+          description: List of available API endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "/api/kernels/"
+                  - "/api/transactions/"
+                  - "/api/frontendobjects/"
+                  - "/api/extensions/"
+                  - "/api/ready/"
+                  - "/api/notebook/"
+                  - "/api/alphaRequest/"
+
+  /api/ready/:
+    post:
+      tags: [health]
+      summary: Check API readiness
+      description: |
+        Health check endpoint to verify the API server is ready to accept requests.
+        This should be the first call when establishing a connection.
+      responses:
+        '200':
+          description: API is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ReadyQ:
+                    type: boolean
+                    example: true
+
+  /api/notebook/:
+    post:
+      tags: [notebooks]
+      summary: List available notebook endpoints
+      description: Returns available notebook management endpoints
+      responses:
+        '200':
+          description: List of notebook endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "/api/notebook/list/"
+                  - "/api/notebook/create/"
+                  - "/api/notebook/create/pull/"
+                  - "/api/notebook/cells/"
+
+  /api/notebook/list/:
+    post:
+      tags: [notebooks]
+      summary: List all notebooks
+      description: |
+        Retrieves a list of all currently opened notebooks with their metadata.
+        Essential for discovering available notebooks to work with.
+      responses:
+        '200':
+          description: List of notebooks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notebook'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/create/:
+    post:
+      tags: [notebooks]
+      summary: Create a new notebook
+      description: |
+        Creates a new notebook instance. Returns a UUID that can be used with
+        `/api/notebook/create/pull/` to get the notebook ID once creation is complete.
+        
+        **Workflow:**
+        1. Call this endpoint to initiate notebook creation
+        2. Use returned UUID with `/api/notebook/create/pull/` to get notebook ID
+        3. Use notebook ID for subsequent cell operations
+      responses:
+        '200':
+          description: Notebook creation initiated
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+                example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/create/pull/:
+    post:
+      tags: [notebooks]
+      summary: Get created notebook ID
+      description: |
+        Retrieves the notebook ID for a notebook creation request.
+        Use the UUID returned from `/api/notebook/create/` as the request body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Id:
+                  type: string
+                  format: uuid
+                  description: UUID returned from notebook creation
+              example:
+                Id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        '200':
+          description: Notebook ID retrieved
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "notebook_hash_12345"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/:
+    post:
+      tags: [cells]
+      summary: List available cell endpoints
+      description: Returns available cell management endpoints
+      responses:
+        '200':
+          description: List of cell endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "/api/notebook/cells/list/"
+                  - "/api/notebook/cells/get/"
+                  - "/api/notebook/cells/focused/"
+                  - "/api/notebook/cells/set/"
+                  - "/api/notebook/cells/add/"
+                  - "/api/notebook/cells/evaluate/"
+                  - "/api/notebook/cells/project/"
+                  - "/api/notebook/cells/delete/"
+
+  /api/notebook/cells/list/:
+    post:
+      tags: [cells]
+      summary: List cells in a notebook
+      description: |
+        Retrieves all cells in the specified notebook with their metadata.
+        Essential for understanding notebook structure and cell states.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Notebook:
+                  type: string
+                  description: Notebook hash/ID
+              example:
+                Notebook: "notebook_hash_12345"
+      responses:
+        '200':
+          description: List of cells
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cell'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/get/:
+    post:
+      tags: [cells]
+      summary: Get cell content
+      description: |
+        Retrieves the content/data of a specific cell.
+        Use this to read cell content before modification or analysis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Cell:
+                  type: string
+                  description: Cell hash/ID
+              example:
+                Cell: "cell_hash_67890"
+      responses:
+        '200':
+          description: Cell content
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Plot[Sin[x], {x, 0, 2*Pi}]"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/focused/:
+    post:
+      tags: [cells]
+      summary: Get focused cell
+      description: |
+        Returns information about the currently focused cell in the notebook.
+        Useful for determining which cell the user is currently working with.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Notebook:
+                  type: string
+                  description: Notebook hash/ID
+              example:
+                Notebook: "notebook_hash_12345"
+      responses:
+        '200':
+          description: Focused cell information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cell'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/set/:
+    post:
+      tags: [cells]
+      summary: Set cell content
+      description: |
+        Updates the content of an existing cell. For input cells, this changes
+        the code that will be executed. Changes are reflected live if the notebook is open.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Cell:
+                  type: string
+                  description: Cell hash/ID
+                Data:
+                  type: string
+                  description: New cell content
+              example:
+                Cell: "cell_hash_67890"
+                Data: "Print[\"Hello, World!\"]"
+      responses:
+        '200':
+          description: Cell content updated
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Data field was updated live in the notebook"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/add/:
+    post:
+      tags: [cells]
+      summary: Add new cell
+      description: |
+        Creates a new cell in the notebook. If "After" is provided, the cell
+        is inserted after the specified cell. Otherwise, it's added at the end.
+        
+        **LLM Integration Pattern:**
+        Use this to programmatically add code cells to notebooks for execution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Notebook:
+                  type: string
+                  description: Notebook hash/ID
+                Data:
+                  type: string
+                  description: Initial cell content
+                After:
+                  type: string
+                  description: Cell hash to insert after (optional)
+              example:
+                Notebook: "notebook_hash_12345"
+                Data: "2 + 2"
+                After: "cell_hash_67890"
+      responses:
+        '200':
+          description: Cell added successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Added after cell_hash_67890"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/evaluate/:
+    post:
+      tags: [cells]
+      summary: Evaluate cell
+      description: |
+        Triggers evaluation of a specific cell. The notebook must be open.
+        This is a core operation for executing code in notebooks.
+        
+        **LLM Integration Pattern:**
+        After adding or modifying cell content, use this to execute the code
+        and generate results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Cell:
+                  type: string
+                  description: Cell hash/ID to evaluate
+              example:
+                Cell: "cell_hash_67890"
+      responses:
+        '200':
+          description: Evaluation started
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Evaluation started"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/notebook/cells/delete/:
+    post:
+      tags: [cells]
+      summary: Delete cell
+      description: |
+        Removes a cell from the notebook permanently.
+        Use with caution as this operation cannot be undone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Cell:
+                  type: string
+                  description: Cell hash/ID to delete
+              example:
+                Cell: "cell_hash_67890"
+      responses:
+        '200':
+          description: Cell deleted
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Removed"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/kernels/:
+    post:
+      tags: [kernels]
+      summary: List available kernel endpoints
+      description: Returns available kernel management endpoints
+      responses:
+        '200':
+          description: List of kernel endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/kernels/list/:
+    post:
+      tags: [kernels]
+      summary: List all kernels
+      description: |
+        Retrieves all available computational kernels with their status.
+        Essential for finding ready kernels for code execution.
+        
+        **LLM Integration Pattern:**
+        Always check kernel availability and readiness before executing code.
+        Look for kernels with both ReadyQ and ContainerReadyQ set to true.
+      responses:
+        '200':
+          description: List of kernels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Kernel'
+
+  /api/kernels/get/:
+    post:
+      tags: [kernels]
+      summary: Get kernel details
+      description: Get detailed information about a specific kernel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Hash:
+                  type: string
+                  description: Kernel hash/ID
+              example:
+                Hash: "kernel_hash_abc123"
+      responses:
+        '200':
+          description: Kernel details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Kernel'
+
+  /api/kernels/restart/:
+    post:
+      tags: [kernels]
+      summary: Restart kernel
+      description: |
+        Restarts the specified kernel, clearing all variables and state.
+        Use when you need a clean computational environment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Hash:
+                  type: string
+                  description: Kernel hash/ID
+              example:
+                Hash: "kernel_hash_abc123"
+      responses:
+        '200':
+          description: Kernel restarted
+          content:
+            application/json:
+              schema:
+                type: boolean
+                example: true
+
+  /api/kernels/abort/:
+    post:
+      tags: [kernels]
+      summary: Abort kernel evaluation
+      description: |
+        Stops any currently running evaluation in the specified kernel.
+        Useful for canceling long-running or stuck computations.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Hash:
+                  type: string
+                  description: Kernel hash/ID
+              example:
+                Hash: "kernel_hash_abc123"
+      responses:
+        '200':
+          description: Evaluation aborted
+          content:
+            application/json:
+              schema:
+                type: boolean
+                example: true
+
+  /api/transactions/:
+    post:
+      tags: [transactions]
+      summary: List available transaction endpoints
+      description: Returns available transaction management endpoints
+      responses:
+        '200':
+          description: List of transaction endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/transactions/create/:
+    post:
+      tags: [transactions]
+      summary: Create execution transaction
+      description: |
+        Creates a new transaction for executing code on a kernel.
+        This is the primary method for running Wolfram Language code.
+        
+        **LLM Integration Pattern:**
+        1. Create transaction with code to execute
+        2. Poll with `/api/transactions/get/` until State is "Idle"
+        3. Retrieve results from the Result field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Kernel:
+                  type: string
+                  description: Kernel hash/ID
+                Data:
+                  type: string
+                  description: Wolfram Language code to execute
+              example:
+                Kernel: "kernel_hash_abc123"
+                Data: "Plot[Sin[x], {x, 0, 2*Pi}]"
+      responses:
+        '200':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Transaction hash for tracking
+                example: "transaction_hash_xyz789"
+
+  /api/transactions/get/:
+    post:
+      tags: [transactions]
+      summary: Get transaction status and results
+      description: |
+        Retrieves the current status and results of a transaction.
+        Poll this endpoint to monitor execution progress and get results.
+        
+        **States:**
+        - "Evaluation": Still running
+        - "Idle": Completed successfully
+        - "Error": Failed with error
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Hash:
+                  type: string
+                  description: Transaction hash
+              example:
+                Hash: "transaction_hash_xyz789"
+      responses:
+        '200':
+          description: Transaction status and results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+  /api/transactions/list/:
+    post:
+      tags: [transactions]
+      summary: List all transactions
+      description: |
+        Retrieves a list of all current transactions with their status.
+        Useful for monitoring multiple concurrent executions.
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransactionSummary'
+
+  /api/transactions/delete/:
+    post:
+      tags: [transactions]
+      summary: Delete transaction
+      description: |
+        Removes a transaction from the system. Use to clean up
+        completed transactions and free memory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Hash:
+                  type: string
+                  description: Transaction hash
+              example:
+                Hash: "transaction_hash_xyz789"
+      responses:
+        '200':
+          description: Transaction deleted
+          content:
+            application/json:
+              schema:
+                type: boolean
+                example: true
+
+  /api/frontendobjects/get/:
+    post:
+      tags: [frontend-objects]
+      summary: Get frontend object
+      description: |
+        Retrieves serialized frontend objects by their UID.
+        Used for accessing dynamic content and interactive elements.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                UId:
+                  type: string
+                  description: Object unique identifier
+                Kernel:
+                  type: string
+                  description: Kernel hash (optional, uses default if not provided)
+              example:
+                UId: "object_uid_123"
+                Kernel: "kernel_hash_abc123"
+      responses:
+        '200':
+          description: Frontend object data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrontendObject'
+
+  /api/extensions/list/:
+    post:
+      tags: [extensions]
+      summary: List available extensions
+      description: |
+        Returns all available frontend extensions with their versions.
+        Extensions provide additional functionality like plotting, UI components, etc.
+      responses:
+        '200':
+          description: List of extensions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Extension'
+
+  /api/alphaRequest/:
+    post:
+      tags: [utilities]
+      summary: Wolfram Alpha query
+      description: |
+        Integrates with Wolfram Alpha to answer natural language queries.
+        Useful for quick computational questions and reference lookups.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Query:
+                  type: string
+                  description: Natural language query
+              example:
+                Query: "What is the derivative of x^2?"
+      responses:
+        '200':
+          description: Wolfram Alpha response
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "2*x"
+
+components:
+  schemas:
+    Notebook:
+      type: object
+      properties:
+        Id:
+          type: string
+          description: Unique notebook identifier
+        Opened:
+          type: boolean
+          description: Whether the notebook is currently open
+        Path:
+          type: string
+          description: File path of the notebook
+      example:
+        Id: "notebook_hash_12345"
+        Opened: true
+        Path: "/path/to/notebook.wln"
+
+    Cell:
+      type: object
+      properties:
+        Id:
+          type: string
+          description: Unique cell identifier
+        Type:
+          type: string
+          enum: [Input, Output]
+          description: Cell type
+        State:
+          type: string
+          description: Current cell state
+        Display:
+          type: string
+          description: Display type for rendering
+      example:
+        Id: "cell_hash_67890"
+        Type: "Input"
+        State: "Ready"
+        Display: "codemirror"
+
+    Kernel:
+      type: object
+      properties:
+        Hash:
+          type: string
+          description: Unique kernel identifier
+        State:
+          type: string
+          description: Current kernel state
+        ReadyQ:
+          type: boolean
+          description: Whether kernel is ready for evaluation
+        Name:
+          type: string
+          description: Kernel name/type
+        ContainerReadyQ:
+          type: boolean
+          description: Whether kernel container is ready
+      example:
+        Hash: "kernel_hash_abc123"
+        State: "Ready"
+        ReadyQ: true
+        Name: "WolframLanguage"
+        ContainerReadyQ: true
+
+    Transaction:
+      type: object
+      properties:
+        Hash:
+          type: string
+          description: Transaction identifier
+        State:
+          type: string
+          enum: [Evaluation, Idle, Error]
+          description: Transaction state
+        Result:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResult'
+          description: Execution results
+      example:
+        Hash: "transaction_hash_xyz789"
+        State: "Idle"
+        Result:
+          - Data: "Plot output data"
+            Display: "graphics"
+            Type: "Output"
+
+    TransactionResult:
+      type: object
+      properties:
+        Data:
+          type: string
+          description: Result data
+        Display:
+          type: string
+          description: Display format
+        Type:
+          type: string
+          description: Result type
+      example:
+        Data: "42"
+        Display: "codemirror"
+        Type: "Output"
+
+    TransactionSummary:
+      type: object
+      properties:
+        Hash:
+          type: string
+          description: Transaction identifier
+        State:
+          type: string
+          description: Transaction state
+      example:
+        Hash: "transaction_hash_xyz789"
+        State: "Idle"
+
+    FrontendObject:
+      type: object
+      properties:
+        Resolved:
+          type: boolean
+          description: Whether object is resolved
+        Data:
+          type: string
+          description: Serialized object data (when resolved)
+      example:
+        Resolved: true
+        Data: "{\"type\": \"plot\", \"data\": \"...\"}"
+
+    Extension:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Extension name
+        version:
+          type: string
+          description: Extension version
+      example:
+        name: "wljs-plotly"
+        version: "1.2.3"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters or missing required fields
+      content:
+        application/json:
+          schema:
+            type: string
+            example: "$Failed"
+
+  securitySchemes: {}
+
+security: []

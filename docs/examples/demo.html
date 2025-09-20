@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WLJS API Web Integration Demo</title>
+    <style>
+        /* Modern, clean styling for the demo */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .demo-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .demo-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .demo-card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        /* Notebook Styles */
+        .notebook-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .notebook-header {
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        .status {
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* Cell Styles */
+        .cell {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .cell-header {
+            background: #f7fafc;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .cell-type {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .cell-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .cell-input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            resize: vertical;
+            min-height: 60px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background: #fafafa;
+        }
+
+        .cell-input:focus {
+            outline: none;
+            background: white;
+        }
+
+        .cell-output {
+            padding: 12px;
+            background: #f8f9fa;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .result {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .result.output {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result.graphics {
+            background: #fef5e7;
+            border-left: 4px solid #ed8936;
+            color: #744210;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .no-output {
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Math Evaluator Styles */
+        .math-evaluator {
+            height: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .form-control {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .result-area {
+            min-height: 80px;
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .examples {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+        }
+
+        .examples p {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .example-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-btn {
+            background: #edf2f7;
+            color: #4a5568;
+            border: 1px solid #d1d5db;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .example-btn:hover {
+            background: #e2e8f0;
+            border-color: #a0aec0;
+        }
+
+        .loading {
+            color: #4299e1;
+            font-style: italic;
+        }
+
+        .math-result {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #2d3748;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .graphics-result {
+            background: #fef5e7;
+            color: #744210;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #ed8936;
+        }
+
+        .no-result {
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        /* Info section */
+        .info-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 30px;
+        }
+
+        .info-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+        }
+
+        .info-section ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .info-section li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .info-section li:before {
+            content: "✨";
+            margin-right: 8px;
+        }
+
+        /* Loading states */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧮 WLJS API Web Integration</h1>
+            <p>Interactive demonstration of computational notebook capabilities</p>
+        </div>
+
+        <div class="demo-grid">
+            <!-- Interactive Notebook -->
+            <div class="demo-card">
+                <h3>📔 Interactive Notebook</h3>
+                <p>Create and manage computational cells with live evaluation.</p>
+                <div id="notebook-container"></div>
+            </div>
+
+            <!-- Math Evaluator -->
+            <div class="demo-card">
+                <h3>🔢 Quick Math Evaluator</h3>
+                <p>Evaluate mathematical expressions instantly.</p>
+                <div id="math-evaluator-container"></div>
+            </div>
+        </div>
+
+        <!-- Information Section -->
+        <div class="info-section">
+            <h3>🚀 Features Demonstrated</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div>
+                    <h4>Notebook Operations</h4>
+                    <ul>
+                        <li>Create and manage notebooks</li>
+                        <li>Add and evaluate cells dynamically</li>
+                        <li>Handle different output types</li>
+                        <li>Real-time computation results</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>API Integration</h4>
+                    <ul>
+                        <li>Asynchronous transaction handling</li>
+                        <li>Kernel management and status</li>
+                        <li>Error handling and recovery</li>
+                        <li>Result interpretation</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>User Experience</h4>
+                    <ul>
+                        <li>Responsive web interface</li>
+                        <li>Keyboard shortcuts (Ctrl+Enter)</li>
+                        <li>Interactive examples</li>
+                        <li>Loading states and feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Notes -->
+        <div class="info-section">
+            <h3>🔧 Technical Implementation</h3>
+            <p>This demo showcases:</p>
+            <ul>
+                <li><strong>RESTful API Integration:</strong> Clean abstraction over WLJS endpoints</li>
+                <li><strong>Asynchronous Programming:</strong> Proper handling of computational transactions</li>
+                <li><strong>State Management:</strong> Tracking notebooks, cells, and computation context</li>
+                <li><strong>Error Handling:</strong> Graceful degradation and user feedback</li>
+                <li><strong>Responsive Design:</strong> Works on desktop and mobile devices</li>
+                <li><strong>Modern JavaScript:</strong> ES6+ features and best practices</li>
+            </ul>
+        </div>
+
+        <!-- Prerequisites -->
+        <div class="info-section">
+            <h3>📋 Prerequisites</h3>
+            <p>To use this demo:</p>
+            <ul>
+                <li>WLJS server running on <code>http://127.0.0.1:20560</code></li>
+                <li>At least one computational kernel available and ready</li>
+                <li>Modern web browser with JavaScript enabled</li>
+                <li>CORS configured to allow web requests (if needed)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Include the JavaScript -->
+    <script src="web_integration.js"></script>
+    
+    <script>
+        // Additional demo functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎉 WLJS Web Integration Demo Loaded');
+            console.log('Make sure WLJS server is running on http://127.0.0.1:20560');
+            
+            // Add some helpful console logs for debugging
+            window.addEventListener('error', function(e) {
+                console.error('JavaScript Error:', e.error);
+            });
+            
+            // Add connection status indicator
+            const statusIndicator = document.createElement('div');
+            statusIndicator.id = 'connection-status';
+            statusIndicator.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 8px 12px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: bold;
+                z-index: 1000;
+                transition: all 0.3s ease;
+            `;
+            statusIndicator.textContent = '🔄 Checking connection...';
+            statusIndicator.style.background = '#ffd93d';
+            statusIndicator.style.color = '#744210';
+            document.body.appendChild(statusIndicator);
+            
+            // Check API connection
+            fetch('http://127.0.0.1:20560/api/ready/', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ReadyQ) {
+                        statusIndicator.textContent = '✅ API Connected';
+                        statusIndicator.style.background = '#c6f6d5';
+                        statusIndicator.style.color = '#2f855a';
+                    } else {
+                        throw new Error('API not ready');
+                    }
+                })
+                .catch(error => {
+                    statusIndicator.textContent = '❌ API Disconnected';
+                    statusIndicator.style.background = '#fed7d7';
+                    statusIndicator.style.color = '#c53030';
+                    console.warn('Could not connect to WLJS API:', error);
+                });
+        });
+    </script>
+</body>
+</html>
